@@ -28,7 +28,7 @@ jobs:
           chmod +x build_cdie.sh
           ./build_cdie.sh
 
-      - name: Build Minimal Ubuntu Live System
+      - name: Build dieOS ISO
         run: |
           mkdir -p /tmp/ubuntu-rootfs /tmp/iso-work/boot/grub
           
