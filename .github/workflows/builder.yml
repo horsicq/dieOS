@@ -73,21 +73,37 @@ jobs:
           ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM
           EOT
 
-          # Forensic Banner setup
+          # Forensic Banner, Custom Help & Orange Prompt setup
           cat << 'EOT' > /root/.bashrc
-          export PS1="\[\033[01;31m\]root@dieOS\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]# "
+          export PS1="\[\033[38;5;208m\]root@dieOS\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]# "
+          
+          help() {
+              echo "========================================================="
+              echo "                    dieOS Help Center                    "
+              echo "========================================================="
+              echo " [Drive & Mounting]"
+              echo "   lsblk -f                : List all connected drives and filesystems"
+              echo "   ntfs-3g -o ro,noexec... : Mount a Windows drive in forensic read-only mode"
+              echo "   umount /path            : Unmount a previously mounted drive"
+              echo ""
+              echo " [File Analysis]"
+              echo "   diec -d db <file>       : Scan a file with the Detect-It-Easy database"
+              echo ""
+              echo " [System Configuration]"
+              echo "   loadkeys <layout>       : Change keyboard layout (e.g., loadkeys de, loadkeys us)"
+              echo "   clear                   : Clear the terminal screen"
+              echo "   poweroff                : Safely shut down the system"
+              echo "   reboot                  : Restart the system"
+              echo "========================================================="
+          }
+
           mkdir -p /analyze
           clear
           echo "========================================================="
           echo "                        dieOS                            "
           echo "   Detect It Easy OS - OS for determining types of files "
           echo "========================================================="
-          echo " 1. List available drives:"
-          echo "    lsblk -f"
-          echo " 2. Mount a Windows drive Read-Only (Forensic mode):"
-          echo "    ntfs-3g -o ro,noexec /dev/sdX ."
-          echo " 3. Determine file type (using local db):"
-          echo "    diec -d db filename"
+          echo " Type 'help' to see available forensic commands."
           echo "========================================================="
           cd /analyze
           EOT
@@ -102,11 +118,11 @@ jobs:
           sudo cp /tmp/ubuntu-rootfs/boot/vmlinuz-* /tmp/iso-work/vmlinuz
           sudo cp /tmp/ubuntu-rootfs/boot/initrd.img-* /tmp/iso-work/initrd
 
-          # Build Squashfs utilizing ALL CPU cores
+          # Build Squashfs utilizing ALL CPU cores with HIGH COMPRESSION ONLY
           CPU_CORES=$(nproc)
-          echo "Building squashfs using $CPU_CORES CPU cores..."
+          echo "Building heavily compressed squashfs using $CPU_CORES CPU cores..."
           sudo mkdir -p /tmp/iso-work/casper
-          sudo mksquashfs /tmp/ubuntu-rootfs /tmp/iso-work/casper/filesystem.squashfs -no-recovery -comp xz -processors $CPU_CORES
+          sudo mksquashfs /tmp/ubuntu-rootfs /tmp/iso-work/casper/filesystem.squashfs -no-recovery -comp xz -Xbcj x86 -processors $CPU_CORES
 
           # Create basic GRUB config with proper casper live parameters
           cat << 'EOF' > /tmp/iso-work/boot/grub/grub.cfg
