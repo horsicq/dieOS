@@ -1,0 +1,137 @@
+name: Build dieOS
+
+on:
+  push:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-dieos-iso:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential git squashfs-tools genisoimage xorriso curl debootstrap grub-pc-bin grub-efi-amd64-bin mtools
+
+      - name: Compile CDiE
+        run: |
+          chmod +x build_cdie.sh
+          ./build_cdie.sh
+
+      - name: Build Minimal Ubuntu Live System
+        run: |
+          mkdir -p /tmp/ubuntu-rootfs /tmp/iso-work/boot/grub
+          
+          # Bootstrap minimal Ubuntu Jammy
+          sudo debootstrap --arch=amd64 jammy /tmp/ubuntu-rootfs http://archive.ubuntu.com/ubuntu/
+
+          # Mount virtual filesystems
+          sudo mount --bind /dev /tmp/ubuntu-rootfs/dev
+          sudo mount --bind /proc /tmp/ubuntu-rootfs/proc
+          sudo mount --bind /sys /tmp/ubuntu-rootfs/sys
+
+          # Copy compiled binary
+          sudo mkdir -p /tmp/ubuntu-rootfs/usr/bin
+          sudo cp CDiE/build/src/console/cdie /tmp/ubuntu-rootfs/usr/bin/diec
+          sudo chmod +x /tmp/ubuntu-rootfs/usr/bin/diec
+
+          # Copy the Detect-It-Easy database folder into /analyze/db inside the live system
+          sudo mkdir -p /tmp/ubuntu-rootfs/analyze
+          if [ -d "Detect-It-Easy/db" ]; then
+            sudo cp -r Detect-It-Easy/db /tmp/ubuntu-rootfs/analyze/db
+            echo "Successfully copied Detect-It-Easy/db to /analyze/db"
+          else
+            echo "WARNING: Detect-It-Easy/db not found!"
+          fi
+
+          # Configure inside chroot
+          sudo chroot /tmp/ubuntu-rootfs /bin/bash << 'EOF'
+          export DEBIAN_FRONTEND=noninteractive
+
+          # Enable universe for live packages
+          echo "deb http://archive.ubuntu.com/ubuntu/ jammy universe" >> /etc/apt/sources.list
+          echo "deb http://archive.ubuntu.com/ubuntu/ jammy-updates universe" >> /etc/apt/sources.list
+
+          apt-get update
+          apt-get install -y linux-image-generic ntfs-3g systemd-sysv grub-pc casper live-boot live-boot-initramfs-tools
+
+          # Auto-login setup
+          mkdir -p /etc/systemd/system/getty@tty1.service.d
+          cat << 'EOT' > /etc/systemd/system/getty@tty1.service.d/override.conf
+          [Service]
+          ExecStart=
+          ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM
+          EOT
+
+          # Forensic Banner setup
+          cat << 'EOT' > /root/.bashrc
+          export PS1="\[\033[01;31m\]root@dieOS\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]# "
+          mkdir -p /analyze
+          clear
+          echo "========================================================="
+          echo "                        dieOS                            "
+          echo "   Detect It Easy OS - OS for determining types of files "
+          echo "========================================================="
+          echo " 1. List available drives:"
+          echo "    lsblk -f"
+          echo " 2. Mount a Windows drive Read-Only (Forensic mode):"
+          echo "    ntfs-3g -o ro,noexec /dev/sdX ."
+          echo " 3. Determine file type (using local db):"
+          echo "    diec -d db filename"
+          echo "========================================================="
+          cd /analyze
+          EOT
+          EOF
+
+          # Unmount virtual filesystems
+          sudo umount /tmp/ubuntu-rootfs/dev
+          sudo umount /tmp/ubuntu-rootfs/proc
+          sudo umount /tmp/ubuntu-rootfs/sys
+
+          # Copy kernel and initrd to ISO workdir
+          sudo cp /tmp/ubuntu-rootfs/boot/vmlinuz-* /tmp/iso-work/vmlinuz
+          sudo cp /tmp/ubuntu-rootfs/boot/initrd.img-* /tmp/iso-work/initrd
+
+          # Build Squashfs utilizing ALL CPU cores
+          CPU_CORES=$(nproc)
+          echo "Building squashfs using $CPU_CORES CPU cores..."
+          sudo mkdir -p /tmp/iso-work/casper
+          sudo mksquashfs /tmp/ubuntu-rootfs /tmp/iso-work/casper/filesystem.squashfs -no-recovery -comp xz -processors $CPU_CORES
+
+          # Create basic GRUB config with proper casper live parameters
+          cat << 'EOF' > /tmp/iso-work/boot/grub/grub.cfg
+          set timeout=1
+          set default=0
+
+          menuentry "dieOS (Detect It Easy OS)" {
+              linux /vmlinuz boot=casper quiet splash ---
+              initrd /initrd
+          }
+          EOF
+
+          # Generate bootable ISO using xorriso with BIOS/UEFI support
+          sudo grub-mkrescue -o /tmp/dieOS.iso /tmp/iso-work
+
+      - name: Prepare ISO for Release
+        run: |
+          cp /tmp/dieOS.iso dieOS.iso
+          ls -lh dieOS.iso
+
+      - name: Create GitHub Release and Upload ISO
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "Beta"
+          name: "Beta"
+          files: dieOS.iso
+          draft: false
+          prerelease: true
