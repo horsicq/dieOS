@@ -87,7 +87,7 @@ jobs:
               echo "   umount /path            : Unmount a previously mounted drive"
               echo ""
               echo " [File Analysis]"
-              echo "   diec -d db <file>       : Scan a file with the Detect-It-Easy database"
+              echo "   diec -D db <file>       : Scan a file with the signature database"
               echo ""
               echo " [System Configuration]"
               echo "   loadkeys <layout>       : Change keyboard layout (e.g., loadkeys de, loadkeys us)"
