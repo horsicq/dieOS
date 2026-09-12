@@ -1,0 +1,90 @@
+name: Build dieOS (i386 Legacy)
+
+on:
+  push:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-dieos-i386:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Host Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools genisoimage xorriso debootstrap grub-pc-bin grub-efi-ia32-bin mtools
+
+      - name: Build dieOS 32-Bit (Debian Bookworm)
+        run: |
+          mkdir -p /tmp/debian-rootfs /tmp/iso-work/boot/grub
+          
+          # Bootstrap minimal Debian Bookworm (i386)
+          sudo debootstrap --arch=i386 bookworm /tmp/debian-rootfs http://deb.debian.org/debian/
+
+          # Copy CDiE source and build script for native compilation
+          sudo cp -r CDiE /tmp/debian-rootfs/CDiE
+          sudo cp build_cdie.sh /tmp/debian-rootfs/build_cdie.sh
+          
+          # Copy Detect-It-Easy DB
+          sudo mkdir -p /tmp/debian-rootfs/analyze
+          if [ -d "Detect-It-Easy/db" ]; then
+            sudo cp -r Detect-It-Easy/db /tmp/debian-rootfs/analyze/db
+          fi
+
+          # Apply universal overlay
+          sudo cp -a overlay/. /tmp/debian-rootfs/
+
+          # Mount virtual filesystems
+          sudo mount --bind /dev /tmp/debian-rootfs/dev
+          sudo mount --bind /proc /tmp/debian-rootfs/proc
+          sudo mount --bind /sys /tmp/debian-rootfs/sys
+
+          # Execute external Chroot Script
+          sudo cp scripts/setup_chroot_i386.sh /tmp/debian-rootfs/setup_chroot_i386.sh
+          sudo chmod +x /tmp/debian-rootfs/setup_chroot_i386.sh
+          sudo chroot /tmp/debian-rootfs /setup_chroot_i386.sh
+          sudo rm /tmp/debian-rootfs/setup_chroot_i386.sh
+
+          # Unmount virtual filesystems
+          sudo umount /tmp/debian-rootfs/dev
+          sudo umount /tmp/debian-rootfs/proc
+          sudo umount /tmp/debian-rootfs/sys
+
+          # Extract Kernel & Initramfs (Debian uses 'live' instead of 'casper')
+          sudo mkdir -p /tmp/iso-work/live
+          sudo cp /tmp/debian-rootfs/boot/vmlinuz-* /tmp/iso-work/vmlinuz
+          sudo cp /tmp/debian-rootfs/boot/initrd.img-* /tmp/iso-work/initrd
+
+          # Build heavily compressed Squashfs
+          CPU_CORES=$(nproc)
+          sudo mksquashfs /tmp/debian-rootfs /tmp/iso-work/live/filesystem.squashfs -no-recovery -comp xz -Xbcj x86 -processors $CPU_CORES
+
+          # Copy universal GRUB config and patch it for Debian 32-Bit
+          sudo cp overlay/boot/grub/grub.cfg /tmp/iso-work/boot/grub/grub.cfg
+          sudo sed -i 's/boot=casper/boot=live/g' /tmp/iso-work/boot/grub/grub.cfg
+
+          # Generate bootable ISO
+          sudo grub-mkrescue -o /tmp/dieOS_i386.iso /tmp/iso-work
+
+      - name: Prepare ISO for Release
+        run: |
+          cp /tmp/dieOS_i386.iso dieOS_i386.iso
+          ls -lh dieOS_i386.iso
+
+      - name: Create GitHub Release and Upload ISO
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "Beta"
+          name: "Beta"
+          files: dieOS_i386.iso
+          draft: false
+          prerelease: true
