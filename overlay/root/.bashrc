@@ -1,4 +1,4 @@
-VERSION=$(cat release_version.txt)
+VERSION="1.0.0"
 
 export PS1="\[\033[38;5;208m\]root@dieOS\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]# "
 
