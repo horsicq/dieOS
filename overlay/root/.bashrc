@@ -1,3 +1,5 @@
+VERSION=$(cat release_version.txt)
+
 export PS1="\[\033[38;5;208m\]root@dieOS\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]# "
 
 help() {
@@ -23,7 +25,7 @@ help() {
 mkdir -p /analysis
 clear
 echo "========================================================="
-echo "                        dieOS v1.0.0                     "
+echo "                        dieOS v${VERSION}                "
 echo "   Detect It Easy OS - OS for determining types of files "
 echo "========================================================="
 echo " Type 'help' to see available forensic commands."
