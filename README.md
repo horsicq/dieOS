@@ -2,6 +2,11 @@
 
 > **A highly specialized, zero-footprint Live OS built exclusively for rapid binary analysis, reverse engineering, and incident response.**
 
+## 🚀 Getting started
+
+-   **[💎 Download release/beta](https://github.com/horsicq/dieOS/releases)**
+-   [📋 Changelog](https://github.com/horsicq/dieOS/blob/master/changelog.txt)
+
 ---
 
 ## 🎯 The Mission
