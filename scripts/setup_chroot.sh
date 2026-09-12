@@ -8,6 +8,8 @@ echo "deb http://archive.ubuntu.com/ubuntu/ jammy-updates universe" >> /etc/apt/
 apt-get update
 apt-get install -y linux-image-generic ntfs-3g systemd-sysv grub-pc casper live-boot live-boot-initramfs-tools
 
+ln -s /usr/bin/diec /usr/bin/cdie
+
 # Clean up apt caches to keep ISO small
 apt-get clean
 rm -rf /var/lib/apt/lists/*

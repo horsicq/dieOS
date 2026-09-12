@@ -16,6 +16,8 @@ mkdir -p /usr/bin
 cp /CDiE/build/src/console/cdie /usr/bin/diec
 chmod +x /usr/bin/diec
 
+ln -s /usr/bin/diec /usr/bin/cdie
+
 # Install OS packages (linux-image-686 ensures compatibility without PAE)
 apt-get install -y linux-image-686 ntfs-3g systemd-sysv grub-pc live-boot live-config kbd console-data console-setup
 
