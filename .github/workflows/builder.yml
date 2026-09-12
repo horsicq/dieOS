@@ -32,122 +32,52 @@ jobs:
         run: |
           mkdir -p /tmp/ubuntu-rootfs /tmp/iso-work/boot/grub
           
-          # Bootstrap minimal Ubuntu Jammy
+          # 1. Bootstrap minimal Ubuntu Jammy
           sudo debootstrap --arch=amd64 jammy /tmp/ubuntu-rootfs http://archive.ubuntu.com/ubuntu/
 
-          # Mount virtual filesystems
+          # 2. Copy compiled binary & database
+          sudo mkdir -p /tmp/ubuntu-rootfs/usr/bin /tmp/ubuntu-rootfs/analyze
+          sudo cp CDiE/build/src/console/cdie /tmp/ubuntu-rootfs/usr/bin/diec
+          sudo chmod +x /tmp/ubuntu-rootfs/usr/bin/diec
+          
+          if [ -d "Detect-It-Easy/db" ]; then
+            sudo cp -r Detect-It-Easy/db /tmp/ubuntu-rootfs/analyze/db
+          fi
+
+          # 3. Apply Overlay (copies all config files seamlessly into the OS!)
+          sudo cp -a overlay/. /tmp/ubuntu-rootfs/
+
+          # 4. Mount virtual filesystems & execute Chroot Script
           sudo mount --bind /dev /tmp/ubuntu-rootfs/dev
           sudo mount --bind /proc /tmp/ubuntu-rootfs/proc
           sudo mount --bind /sys /tmp/ubuntu-rootfs/sys
 
-          # Copy compiled binary
-          sudo mkdir -p /tmp/ubuntu-rootfs/usr/bin
-          sudo cp CDiE/build/src/console/cdie /tmp/ubuntu-rootfs/usr/bin/diec
-          sudo chmod +x /tmp/ubuntu-rootfs/usr/bin/diec
+          sudo cp scripts/setup_chroot.sh /tmp/ubuntu-rootfs/setup_chroot.sh
+          sudo chmod +x /tmp/ubuntu-rootfs/setup_chroot.sh
+          sudo chroot /tmp/ubuntu-rootfs /setup_chroot.sh
+          sudo rm /tmp/ubuntu-rootfs/setup_chroot.sh
 
-          # Copy the Detect-It-Easy database folder into /analyze/db inside the live system
-          sudo mkdir -p /tmp/ubuntu-rootfs/analyze
-          if [ -d "Detect-It-Easy/db" ]; then
-            sudo cp -r Detect-It-Easy/db /tmp/ubuntu-rootfs/analyze/db
-            echo "Successfully copied Detect-It-Easy/db to /analyze/db"
-          else
-            echo "WARNING: Detect-It-Easy/db not found!"
-          fi
-
-          # Configure inside chroot
-          sudo chroot /tmp/ubuntu-rootfs /bin/bash << 'EOF'
-          export DEBIAN_FRONTEND=noninteractive
-
-          # Enable universe for live packages
-          echo "deb http://archive.ubuntu.com/ubuntu/ jammy universe" >> /etc/apt/sources.list
-          echo "deb http://archive.ubuntu.com/ubuntu/ jammy-updates universe" >> /etc/apt/sources.list
-
-          apt-get update
-          apt-get install -y linux-image-generic ntfs-3g systemd-sysv grub-pc casper live-boot live-boot-initramfs-tools
-
-          # Auto-login setup
-          mkdir -p /etc/systemd/system/getty@tty1.service.d
-          cat << 'EOT' > /etc/systemd/system/getty@tty1.service.d/override.conf
-          [Service]
-          ExecStart=
-          ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM
-          EOT
-
-          # Forensic Banner, Custom Help & Orange Prompt setup
-          cat << 'EOT' > /root/.bashrc
-          export PS1="\[\033[38;5;208m\]root@dieOS\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]# "
-          
-          help() {
-              echo "========================================================="
-              echo "                    dieOS Help Center                    "
-              echo "========================================================="
-              echo " [Drive & Mounting]"
-              echo "   lsblk -f                : List all connected drives and filesystems"
-              echo "   ntfs-3g -o ro,noexec... : Mount a Windows drive in forensic read-only mode"
-              echo "   umount /path            : Unmount a previously mounted drive"
-              echo ""
-              echo " [File Analysis]"
-              echo "   diec -D db <file>       : Scan a file with the signature database"
-              echo ""
-              echo " [System Configuration]"
-              echo "   loadkeys <layout>       : Change keyboard layout (e.g., loadkeys de, loadkeys us)"
-              echo "   clear                   : Clear the terminal screen"
-              echo "   poweroff                : Safely shut down the system"
-              echo "   reboot                  : Restart the system"
-              echo "========================================================="
-          }
-
-          mkdir -p /analyze
-          clear
-          echo "========================================================="
-          echo "                        dieOS                            "
-          echo "   Detect It Easy OS - OS for determining types of files "
-          echo "========================================================="
-          echo " Type 'help' to see available forensic commands."
-          echo "========================================================="
-          cd /analyze
-          EOT
-          EOF
-
-          # Unmount virtual filesystems
           sudo umount /tmp/ubuntu-rootfs/dev
           sudo umount /tmp/ubuntu-rootfs/proc
           sudo umount /tmp/ubuntu-rootfs/sys
 
-          # Copy kernel and initrd to ISO workdir
+          # 5. Extract Kernel & Build Squashfs
           sudo cp /tmp/ubuntu-rootfs/boot/vmlinuz-* /tmp/iso-work/vmlinuz
           sudo cp /tmp/ubuntu-rootfs/boot/initrd.img-* /tmp/iso-work/initrd
 
-          # Build Squashfs utilizing ALL CPU cores with HIGH COMPRESSION ONLY
           CPU_CORES=$(nproc)
-          echo "Building heavily compressed squashfs using $CPU_CORES CPU cores..."
           sudo mkdir -p /tmp/iso-work/casper
           sudo mksquashfs /tmp/ubuntu-rootfs /tmp/iso-work/casper/filesystem.squashfs -no-recovery -comp xz -Xbcj x86 -processors $CPU_CORES
 
-          # Create basic GRUB config with proper casper live parameters
-          cat << 'EOF' > /tmp/iso-work/boot/grub/grub.cfg
-          set timeout=1
-          set default=0
-
-          menuentry "dieOS (Detect It Easy OS)" {
-              linux /vmlinuz boot=casper quiet splash ---
-              initrd /initrd
-          }
-          EOF
-
-          # Generate bootable ISO using xorriso with BIOS/UEFI support
+          # 6. Generate ISO (Grub config was already copied via overlay)
+          sudo cp overlay/boot/grub/grub.cfg /tmp/iso-work/boot/grub/grub.cfg
           sudo grub-mkrescue -o /tmp/dieOS.iso /tmp/iso-work
-
-      - name: Prepare ISO for Release
-        run: |
-          cp /tmp/dieOS.iso dieOS.iso
-          ls -lh dieOS.iso
 
       - name: Create GitHub Release and Upload ISO
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "Beta"
           name: "Beta"
-          files: dieOS.iso
+          files: /tmp/dieOS.iso
           draft: false
           prerelease: true
