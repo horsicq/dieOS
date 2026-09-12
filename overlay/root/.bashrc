@@ -20,12 +20,12 @@ help() {
     echo "========================================================="
 }
 
-mkdir -p /analyze
+mkdir -p /analysis
 clear
 echo "========================================================="
-echo "                        dieOS                            "
+echo "                        dieOS v1.0.0                     "
 echo "   Detect It Easy OS - OS for determining types of files "
 echo "========================================================="
 echo " Type 'help' to see available forensic commands."
 echo "========================================================="
-cd /analyze
+cd /analysis
