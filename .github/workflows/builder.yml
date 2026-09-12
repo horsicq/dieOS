@@ -36,12 +36,12 @@ jobs:
           sudo debootstrap --arch=amd64 resolute /tmp/ubuntu-rootfs http://archive.ubuntu.com/ubuntu/
 
           # 2. Copy compiled binary & database
-          sudo mkdir -p /tmp/ubuntu-rootfs/usr/bin /tmp/ubuntu-rootfs/analyze
+          sudo mkdir -p /tmp/ubuntu-rootfs/usr/bin /tmp/ubuntu-rootfs/analysis
           sudo cp CDiE/build/src/console/cdie /tmp/ubuntu-rootfs/usr/bin/diec
           sudo chmod +x /tmp/ubuntu-rootfs/usr/bin/diec
           
           if [ -d "Detect-It-Easy/db" ]; then
-            sudo cp -r Detect-It-Easy/db /tmp/ubuntu-rootfs/analyze/db
+            sudo cp -r Detect-It-Easy/db /tmp/ubuntu-rootfs/analysis/db
           fi
 
           # 3. Apply Overlay (copies all config files seamlessly into the OS!)

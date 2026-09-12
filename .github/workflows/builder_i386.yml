@@ -35,9 +35,9 @@ jobs:
           sudo cp build_cdie.sh /tmp/debian-rootfs/build_cdie.sh
           
           # Copy Detect-It-Easy DB
-          sudo mkdir -p /tmp/debian-rootfs/analyze
+          sudo mkdir -p /tmp/debian-rootfs/analysis
           if [ -d "Detect-It-Easy/db" ]; then
-            sudo cp -r Detect-It-Easy/db /tmp/debian-rootfs/analyze/db
+            sudo cp -r Detect-It-Easy/db /tmp/debian-rootfs/analysis/db
           fi
 
           # Apply universal overlay
