@@ -1,6 +1,7 @@
 1.0.0 (2026-09-11)
 -----------------------------------------------------------------------
-[+] Initial release of dieOS (Detect It Easy OS) based on Ubuntu 26.04 LTS
+[+] Initial release of dieOS (Detect It Easy OS) based on Ubuntu 26.04
+[+] x86 (i386) release based on Debian Bookworm
 [+] Zero-footprint Live-ISO architecture running entirely in RAM
 [+] Pre-installed 'diec' (console) with embedded signature database
 [+] Automated root login with a bright orange terminal prompt
