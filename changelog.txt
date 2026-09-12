@@ -1,4 +1,4 @@
-1.0.0 (2026-09-11)
+1.0.0 (2026-09-12)
 -----------------------------------------------------------------------
 [+] Initial release of dieOS (Detect It Easy OS) based on Ubuntu 26.04
 [+] x86 (i386) release based on Debian Bookworm
