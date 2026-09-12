@@ -32,8 +32,8 @@ jobs:
         run: |
           mkdir -p /tmp/ubuntu-rootfs /tmp/iso-work/boot/grub
           
-          # 1. Bootstrap minimal Ubuntu Jammy
-          sudo debootstrap --arch=amd64 jammy /tmp/ubuntu-rootfs http://archive.ubuntu.com/ubuntu/
+          # 1. Bootstrap minimal Ubuntu Resolute
+          sudo debootstrap --arch=amd64 resolute /tmp/ubuntu-rootfs http://archive.ubuntu.com/ubuntu/
 
           # 2. Copy compiled binary & database
           sudo mkdir -p /tmp/ubuntu-rootfs/usr/bin /tmp/ubuntu-rootfs/analyze
@@ -71,13 +71,13 @@ jobs:
 
           # 6. Generate ISO (Grub config was already copied via overlay)
           sudo cp overlay/boot/grub/grub.cfg /tmp/iso-work/boot/grub/grub.cfg
-          sudo grub-mkrescue -o /tmp/dieOS.iso /tmp/iso-work
+          sudo grub-mkrescue -o /tmp/dieOS_x86_64_resolute.iso /tmp/iso-work
 
       - name: Create GitHub Release and Upload ISO
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "Beta"
           name: "Beta"
-          files: /tmp/dieOS.iso
+          files: /tmp/dieOS_x86_64_resolute.iso
           draft: false
           prerelease: true
