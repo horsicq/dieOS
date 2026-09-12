@@ -17,7 +17,7 @@ cp /CDiE/build/src/console/cdie /usr/bin/diec
 chmod +x /usr/bin/diec
 
 # Install OS packages (linux-image-686 ensures compatibility without PAE)
-apt-get install -y linux-image-686 ntfs-3g systemd-sysv grub-pc live-boot live-config kbd
+apt-get install -y linux-image-686 ntfs-3g systemd-sysv grub-pc live-boot live-config kbd console-data console-setup
 
 # Clean up apt caches to keep ISO small
 apt-get clean
