@@ -23,7 +23,7 @@ jobs:
       - name: Install Host Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y squashfs-tools genisoimage xorriso debootstrap grub-pc-bin grub-efi-ia32-bin mtools
+          sudo apt-get install -y squashfs-tools genisoimage xorriso debootstrap grub-pc-bin grub-efi-ia32-bin mtools libgtk-3-dev
 
       - name: Build dieOS 32-Bit (Debian Bookworm)
         run: |
