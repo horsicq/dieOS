@@ -23,7 +23,7 @@ jobs:
       - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake build-essential git squashfs-tools genisoimage xorriso curl debootstrap grub-pc-bin grub-efi-amd64-bin mtools
+          sudo apt-get install -y cmake build-essential git squashfs-tools genisoimage xorriso curl debootstrap grub-pc-bin grub-efi-amd64-bin mtools libgtk-3-dev
 
       - name: Compile CDiE
         run: |
